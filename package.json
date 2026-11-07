@@ -1,6 +1,6 @@
 {
   "name": "slashy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Slash-command AI skills for Chrome's side panel. Bring your own model.",
   "license": "MIT",
   "private": true,

@@ -11,6 +11,8 @@ import { SkillsView } from './SkillsView';
 
 type View = 'chat' | 'skills' | 'providers';
 
+const slug = (s: Skill) => '/' + s.name.trim().toLowerCase().replace(/\s+/g, '-');
+
 const GENERIC = 'You are Slashy, a concise assistant embedded in the browser. Use Markdown. Answer in the language the user writes in.';
 
 export function App() {
@@ -150,13 +152,13 @@ export function App() {
               </button>
             )}
             <p className="hint">
-              Select text on the page, then type <kbd>/</kbd> to run a skill on it.
+              Select text on a page, then type <kbd>/</kbd>. The skill runs on what you selected.
             </p>
             <ul className="quick">
               {quick.map(s => (
                 <li key={s.id}>
                   <button onClick={() => void send('', s)}>
-                    <b>{s.name}</b>
+                    <b><code>{slug(s)}</code></b>
                     <span>{s.description}</span>
                   </button>
                 </li>
@@ -176,7 +178,7 @@ export function App() {
             {menu.map((s, i) => (
               <li key={s.id} role="option" aria-selected={i === menuIdx}>
                 <button className={i === menuIdx ? 'on' : ''} onMouseEnter={() => setMenuIdx(i)} onMouseDown={e => (e.preventDefault(), pick(s))}>
-                  <b>{s.name}</b>
+                  <b><code>{slug(s)}</code></b>
                   <span>{s.description}</span>
                 </button>
               </li>
@@ -232,7 +234,9 @@ function ContextBar({ ctx, usePage, setUsePage }: { ctx: PageContext | null; use
     return (
       <div className="ctx sel" title={ctx.selection}>
         <TextSelect size={13} aria-hidden />
+        <b>Selection</b>
         <span className="clip">{ctx.selection.replace(/\s+/g, ' ')}</span>
+        <span className="count">{ctx.selection.length}</span>
       </div>
     );
   return (
