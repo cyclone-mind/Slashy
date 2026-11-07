@@ -160,3 +160,9 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 0.85; 
 .fallback { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; margin-bottom: 8px; color: var(--muted); font-size: 12.5px; cursor: pointer; }
 .fallback input { accent-color: var(--accent); margin-top: 3px; }
 .fallback b { display: block; color: var(--fg); font-weight: 600; }
+.tog { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 550; transition: background 0.15s, color 0.15s; }
+.tog:hover { background: var(--raised); color: var(--fg); }
+.tog[aria-pressed='true'] { background: var(--accent-soft); color: var(--fg); }
+.tog[aria-pressed='true'] svg { color: var(--accent); }
+.model { max-width: 40%; }
+.websearch { margin: 8px 0 12px; padding: 0 10px; }

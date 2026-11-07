@@ -129,6 +129,21 @@ export function ProvidersView({ settings, update, onBack }: Props) {
             </span>
           </label>
         )}
+        <div className="form websearch">
+          <label>
+            Firecrawl API key <small>optional</small>
+            <input
+              type="password"
+              autoComplete="off"
+              value={settings.firecrawlKey ?? ''}
+              placeholder="fc-…"
+              onChange={e => update(s => ({ ...s, firecrawlKey: e.target.value }))}
+            />
+          </label>
+          <p className="note">
+            Web search (the Search toggle) is native for Anthropic, OpenAI, OpenRouter, Qwen and GLM, and uses DeepSeek's own search endpoint for DeepSeek. Other providers use Firecrawl, which works without a key at a low rate limit.
+          </p>
+        </div>
         {picking ? (
           <ul className="list presets" aria-label="Choose a provider">
             {PRESETS.map((p, i) => (

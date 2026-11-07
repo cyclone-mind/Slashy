@@ -25,6 +25,11 @@ export interface Settings {
   skills: Skill[];
   /** Try the other providers (in list order) if the active one fails before streaming. Default on. */
   fallback?: boolean;
+  /** Composer toggles; both default off. */
+  webSearch?: boolean;
+  thinking?: boolean;
+  /** Optional. Used for web search on providers without a native one (works without a key at a low rate limit). */
+  firecrawlKey?: string;
 }
 
 export interface PageContext {
@@ -42,5 +47,6 @@ export interface ChatMessage {
   skill?: string; // skill name shown as a chip
   context?: { title: string; url: string; selection: string };
   error?: string;
+  web?: string; // how web search was done for this answer
   via?: string; // set when a fallback provider answered
 }

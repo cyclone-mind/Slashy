@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { ArrowUp, ChevronRight, Eraser, FileText, Settings2, Slash, Square, TextSelect, X, Zap } from 'lucide-react';
+import { ArrowUp, Brain, ChevronRight, Eraser, FileText, Globe, Settings2, Slash, Square, TextSelect, X, Zap } from 'lucide-react';
 import { buildUserContent, fillPrompt, filterSkills, providerChain, slashQuery, toWire, unwrapFence } from '../core';
+import { clientSearch, formatHits, kindOf, searchMode, searchQuery } from '../features';
 import { streamChat } from '../llm';
 import { readActivePage } from '../page';
 import { uid, useSettings } from '../store';
@@ -83,13 +84,38 @@ export function App() {
       // Try providers in order; fall back to the next only if nothing has streamed yet.
       const failed: string[] = [];
       let got = false;
+      const search = !!settings.webSearch;
+      const think = !!settings.thinking;
+      const query = searchQuery(text, fresh?.selection ?? '', fresh?.title ?? '');
+      const hitCache: Record<string, string> = {};
       for (const [i, { provider: p, model: m }] of chain.entries()) {
         try {
+          // Providers without native search get results fetched client-side and prepended to the question.
+          let wire = toWire(history);
+          let webNote: string | undefined;
+          if (search) {
+            const mode = searchMode(kindOf(p));
+            if (mode === 'native') webNote = `native search (${p.name})`;
+            else if (query) {
+              try {
+                hitCache[mode] ??= formatHits(query, await clientSearch(mode, p, query, settings.firecrawlKey, ac.signal));
+                if (hitCache[mode]) {
+                  wire = wire.map((w, j) => (j === wire.length - 1 ? { ...w, content: `${hitCache[mode]}\n\n${w.content}` } : w));
+                  webNote = `${mode === 'deepseek' ? 'DeepSeek' : 'Firecrawl'} search: “${query}”`;
+                } else webNote = 'search found nothing';
+              } catch (e) {
+                if (ac.signal.aborted) throw e;
+                webNote = `search failed (${e instanceof Error ? e.message : e}); answered without it`;
+              }
+            }
+          }
+          patch(r => ({ ...r, web: webNote }));
           await streamChat(
             p,
             m,
             sk ? fillPrompt(sk.prompt, fresh) : GENERIC,
-            toWire(history),
+            wire,
+            { search, think },
             d => {
               got = true;
               patch(r => ({ ...r, content: r.content + (d.text ?? ''), reasoning: (r.reasoning ?? '') + (d.reasoning ?? '') || undefined }));
@@ -246,6 +272,20 @@ export function App() {
           <div className="row">
             <ModelPicker settings={settings} update={update} onAdd={() => setView('providers')} />
             <span className="spacer" />
+            <button
+              className="tog"
+              aria-pressed={!!settings.webSearch}
+              title="Web search (off by default)"
+              onClick={() => update(s => ({ ...s, webSearch: !s.webSearch }))}>
+              <Globe size={14} /> Search
+            </button>
+            <button
+              className="tog"
+              aria-pressed={!!settings.thinking}
+              title="Thinking mode (off by default)"
+              onClick={() => update(s => ({ ...s, thinking: !s.thinking }))}>
+              <Brain size={14} /> Think
+            </button>
             {busy ? (
               <button className="send stop" aria-label="Stop" onClick={() => abort.current?.abort()}>
                 <Square size={13} fill="currentColor" />
@@ -336,6 +376,7 @@ function Message({ m, streaming }: { m: ChatMessage; streaming: boolean }) {
         </div>
       )}
       {streaming && !m.content && !m.reasoning && <div className="dots" aria-label="Loading"><i /><i /><i /></div>}
+      {m.web && <div className="via">Web: {m.web}</div>}
       {m.via && <div className="via">Answered by {m.via}</div>}
       {m.error && <div className="err">{m.error}</div>}
     </div>

@@ -52,7 +52,7 @@ export interface Delta {
   reasoning?: string;
 }
 
-export function parseDelta(protocol: Provider['protocol'], payload: string): Delta | 'done' | null {
+export function parseDelta(style: 'chat' | 'responses' | 'messages', payload: string): Delta | 'done' | null {
   if (payload === '[DONE]') return 'done';
   let j: any;
   try {
@@ -61,7 +61,15 @@ export function parseDelta(protocol: Provider['protocol'], payload: string): Del
     return null;
   }
   if (j.error) throw new Error(j.error.message ?? JSON.stringify(j.error));
-  if (protocol === 'openai') {
+  if (style === 'responses') {
+    if (j.type === 'response.output_text.delta') return { text: j.delta };
+    if (j.type === 'response.reasoning_summary_text.delta' || j.type === 'response.reasoning_text.delta') return { reasoning: j.delta };
+    if (j.type === 'response.completed' || j.type === 'response.incomplete') return 'done';
+    if (j.type === 'response.failed') throw new Error(j.response?.error?.message ?? 'Response failed');
+    if (j.type === 'error') throw new Error(j.message ?? 'Stream error');
+    return null;
+  }
+  if (style === 'chat') {
     const d = j.choices?.[0]?.delta;
     if (!d) return null;
     return { text: d.content || undefined, reasoning: d.reasoning_content || d.reasoning || undefined };

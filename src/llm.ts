@@ -1,34 +1,21 @@
-import { endpoint, parseDelta, sseParser, type Delta } from './core';
+import { parseDelta, sseParser, type Delta } from './core';
+import { buildRequest, type Wire } from './features';
 import type { Provider } from './types';
 
-export interface WireMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+export type { Wire as WireMessage };
 
-/** Stream a chat completion from any OpenAI-compatible or Anthropic provider. */
+/** Stream a chat completion from any supported provider (Chat Completions, Responses, or Anthropic Messages). */
 export async function streamChat(
   p: Provider,
   model: string,
   system: string,
-  messages: WireMessage[],
+  messages: Wire[],
+  opts: { search: boolean; think: boolean },
   onDelta: (d: Delta) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  const anthropic = p.protocol === 'anthropic';
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (anthropic) {
-    headers['x-api-key'] = p.apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-    headers['anthropic-dangerous-direct-browser-access'] = 'true';
-  } else if (p.apiKey) {
-    headers.authorization = `Bearer ${p.apiKey}`;
-  }
-  const body = anthropic
-    ? { model, system, messages, max_tokens: 8192, stream: true }
-    : { model, messages: [{ role: 'system', content: system }, ...messages], stream: true };
-
-  const res = await fetch(endpoint(p), { method: 'POST', headers, body: JSON.stringify(body), signal });
+  const req = buildRequest(p, model, system, messages, opts);
+  const res = await fetch(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body), signal });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${(await res.text()).slice(0, 400)}`);
   if (!res.body) throw new Error('Empty response body');
 
@@ -39,7 +26,7 @@ export async function streamChat(
     const { done, value } = await reader.read();
     if (done) return;
     for (const payload of feed(dec.decode(value, { stream: true }))) {
-      const d = parseDelta(p.protocol, payload);
+      const d = parseDelta(req.style, payload);
       if (d === 'done') return;
       if (d) onDelta(d);
     }
