@@ -1,25 +1,11 @@
-# dependencies
-**/node_modules
-
-# testing
-**/coverage
-
-# build
-**/dist
-**/build
-**/dist-zip
-chrome-extension/manifest.js
-chrome-extension/pre-build.tsconfig.tsbuildinfo
-tsconfig.tsbuildinfo
-
-# env
-**/.env.*
-**/.env
-
-# etc
+node_modules
+dist
+dist-zip
+*.tsbuildinfo
 .DS_Store
-.idea
-**/.turbo
-
-# compiled
-**/tailwind-output.css
+# local-only: demo recordings and design-agent tooling
+*.mp4
+.agents
+.claude
+skills-lock.json
+.env

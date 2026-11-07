@@ -1,11 +1,8 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "ESLint",
-  "extends": "./packages/tsconfig/base.json",
   "compilerOptions": {
-    "noImplicitAny": false,
-    "noEmit": false,
-    "target": "ESNext"
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "jsx": "react-jsx",
+    "strict": true, "noEmit": true, "skipLibCheck": true, "lib": ["ES2023", "DOM"],
+    "types": ["chrome", "node"], "allowImportingTsExtensions": true
   },
-  "include": ["eslint.config.ts"]
+  "include": ["src"]
 }
