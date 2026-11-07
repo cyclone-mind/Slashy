@@ -149,3 +149,6 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 0.85; 
 .ctx.sel b { font-weight: 600; flex: none; }
 .ctx.sel .clip { color: var(--muted); flex: 1; }
 .ctx .count { flex: none; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+.saved { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; font-size: 12px; font-weight: 600; color: var(--accent); opacity: 0; transform: translateY(2px); transition: opacity 0.25s var(--ease), transform 0.25s var(--ease); }
+.saved.on { opacity: 1; transform: none; }

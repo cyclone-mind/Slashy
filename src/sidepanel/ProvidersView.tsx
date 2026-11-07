@@ -3,7 +3,7 @@ import { Check, Plus, Trash2 } from 'lucide-react';
 import { PRESETS } from '../presets';
 import { uid, type useSettings } from '../store';
 import type { Provider, Settings } from '../types';
-import { Header } from './SkillsView';
+import { Header, useFlash } from './SkillsView';
 
 interface Props {
   settings: Settings;
@@ -16,7 +16,11 @@ export function ProvidersView({ settings, update, onBack }: Props) {
   const [picking, setPicking] = useState(false);
   const edit = settings.providers.find(p => p.id === editId);
 
-  const save = (p: Provider) => update(s => ({ ...s, providers: s.providers.map(x => (x.id === p.id ? p : x)) }));
+  const [saved, flash] = useFlash();
+  const save = (p: Provider) => {
+    update(s => ({ ...s, providers: s.providers.map(x => (x.id === p.id ? p : x)) }));
+    flash();
+  };
   const activate = (p: Provider) => update(s => ({ ...s, activeProviderId: p.id, activeModel: p.models[0] ?? null }));
   const addFrom = (i: number) => {
     const p: Provider = { ...PRESETS[i], id: uid(), apiKey: '' };
@@ -41,7 +45,7 @@ export function ProvidersView({ settings, update, onBack }: Props) {
   if (edit)
     return (
       <div className="app">
-        <Header title={edit.name} onBack={() => setEditId(null)} />
+        <Header title={edit.name} onBack={() => setEditId(null)} saved={saved} />
         <main className="scroll form">
           <label>
             Name
@@ -70,7 +74,7 @@ export function ProvidersView({ settings, update, onBack }: Props) {
               onChange={e => save({ ...edit, models: e.target.value.split('\n').map(m => m.trim()).filter(Boolean) })}
             />
           </label>
-          <p className="note">Keys stay in this browser (chrome.storage.local) and are sent only to the Base URL above.</p>
+          <p className="note">Changes save automatically. Keys stay in this browser (chrome.storage.local) and are sent only to the Base URL above.</p>
           <div className="actions">
             <button className="ghost" onClick={() => (activate(edit), setEditId(null))}>
               <Check size={14} /> Use this provider
