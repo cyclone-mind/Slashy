@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ArrowUp, ChevronRight, Eraser, FileText, Settings2, Slash, Square, TextSelect, X, Zap } from 'lucide-react';
-import { buildUserContent, filterSkills, slashQuery, toWire } from '../core';
+import { buildUserContent, fillPrompt, filterSkills, providerChain, slashQuery, toWire, unwrapFence } from '../core';
 import { streamChat } from '../llm';
 import { readActivePage } from '../page';
 import { uid, useSettings } from '../store';
@@ -55,12 +55,12 @@ export function App() {
   }, [sq]);
 
   const provider = settings?.providers.find(p => p.id === settings.activeProviderId) ?? null;
-  const model = settings?.activeModel ?? provider?.models[0] ?? null;
 
   const send = useCallback(
     async (text: string, sk: Skill | null) => {
       if (busy || !settings) return;
-      if (!provider || !model) return setView('providers');
+      const chain = providerChain(settings, settings.fallback !== false);
+      if (!chain.length) return setView('providers');
       if (!text.trim() && !sk) return;
       const fresh = (await readActivePage()) ?? ctx;
       const content = buildUserContent(text, fresh, usePage);
@@ -80,23 +80,57 @@ export function App() {
       const ac = (abort.current = new AbortController());
       const patch = (f: (m: ChatMessage) => ChatMessage) =>
         setMessages(ms => ms.map(m => (m.id === reply.id ? f(m) : m)));
-      try {
-        await streamChat(
-          provider,
-          model,
-          sk?.prompt ?? GENERIC,
-          toWire(history),
-          d => patch(m => ({ ...m, content: m.content + (d.text ?? ''), reasoning: (m.reasoning ?? '') + (d.reasoning ?? '') || undefined })),
-          ac.signal,
-        );
-      } catch (e) {
-        if (!ac.signal.aborted) patch(m => ({ ...m, error: e instanceof Error ? e.message : String(e) }));
-      } finally {
-        setBusy(false);
+      // Try providers in order; fall back to the next only if nothing has streamed yet.
+      const failed: string[] = [];
+      let got = false;
+      for (const [i, { provider: p, model: m }] of chain.entries()) {
+        try {
+          await streamChat(
+            p,
+            m,
+            sk ? fillPrompt(sk.prompt, fresh) : GENERIC,
+            toWire(history),
+            d => {
+              got = true;
+              patch(r => ({ ...r, content: r.content + (d.text ?? ''), reasoning: (r.reasoning ?? '') + (d.reasoning ?? '') || undefined }));
+            },
+            ac.signal,
+          );
+          if (failed.length) patch(r => ({ ...r, via: `${p.name} · ${m} (after ${failed.join('; ')})` }));
+          break;
+        } catch (e) {
+          if (ac.signal.aborted) break;
+          const msg = e instanceof Error ? e.message : String(e);
+          failed.push(`${p.name} failed: ${msg.slice(0, 120)}`);
+          if (got || i === chain.length - 1) {
+            patch(r => ({ ...r, error: failed.join('\n') }));
+            break;
+          }
+        }
       }
+      setBusy(false);
     },
-    [busy, settings, provider, model, ctx, usePage, messages],
+    [busy, settings, ctx, usePage, messages],
   );
+
+  // Right-click menu → background stores a pending run; run it once settings are loaded.
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  useEffect(() => {
+    if (!settings) return;
+    const run = async () => {
+      const got = await chrome.storage.session.get('slashy.pending');
+      const pend = got['slashy.pending'] as { skillId: string; ts: number } | undefined;
+      if (!pend) return;
+      await chrome.storage.session.remove('slashy.pending');
+      const sk = settings.skills.find(s => s.id === pend.skillId);
+      if (sk && Date.now() - pend.ts < 15000) void sendRef.current('', sk);
+    };
+    void run();
+    const on = (c: Record<string, chrome.storage.StorageChange>, area: string) => area === 'session' && c['slashy.pending'] && void run();
+    chrome.storage.onChanged.addListener(on);
+    return () => chrome.storage.onChanged.removeListener(on);
+  }, [settings?.skills.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (s: Skill) => {
     setSkill(s);
@@ -123,7 +157,7 @@ export function App() {
   if (view === 'skills') return <SkillsView settings={settings} update={update} onBack={() => setView('chat')} />;
   if (view === 'providers') return <ProvidersView settings={settings} update={update} onBack={() => setView('chat')} />;
 
-  const quick = settings.skills.filter(s => s.enabled).slice(0, 5);
+  const quick = settings.skills.filter(s => s.enabled);
 
   return (
     <div className="app">
@@ -298,10 +332,11 @@ function Message({ m, streaming }: { m: ChatMessage; streaming: boolean }) {
       )}
       {m.content && (
         <div className="md">
-          <ReactMarkdown>{m.content}</ReactMarkdown>
+          <ReactMarkdown>{unwrapFence(m.content)}</ReactMarkdown>
         </div>
       )}
       {streaming && !m.content && !m.reasoning && <div className="dots" aria-label="Loading"><i /><i /><i /></div>}
+      {m.via && <div className="via">Answered by {m.via}</div>}
       {m.error && <div className="err">{m.error}</div>}
     </div>
   );

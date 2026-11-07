@@ -8,8 +8,9 @@ English · [简体中文](README.zh-CN.md)
 
 - **Slash skills.** Type `/` in the panel to get a searchable list of skills. Pick one, add details if you like, press Enter.
 - **Page context, automatically.** Your current text selection is sent with the skill. With no selection, the whole page text is used (toggle "Use page" off to ask a plain question).
-- **Your own skills.** A skill is a name plus a prompt. Create, edit, disable, or reset them from the lightning-bolt button. Five are built in: Summarize, Explain, Translate, Polish, Sentence study.
-- **Any model provider.** Add providers from presets (or a custom URL), switch the active model from the picker under the input. Streams answers and shows reasoning for models that expose it.
+- **Right-click to run.** Select text (or right-click the page), choose **Slashy: run skill**, and pick a skill. The side panel opens and runs it.
+- **Your own skills.** A skill is a name plus a prompt. Create, edit, disable, or reset them from the lightning-bolt button. Five are built in: Summarize, Explain, Translate, Polish, Sentence study. Prompts may use `{selection}`, `{url}` and `{title}` placeholders. If a prompt asks for output inside a ```` ```markdown ```` block, Slashy unwraps it so the answer renders as Markdown.
+- **Any model provider.** Add providers from presets (or a custom URL), switch the active model from the picker under the input. Streams answers and shows reasoning for models that expose it. **Fallback:** the Active provider is tried first; if it fails before answering, the others are tried top to bottom (reorder with the arrows, toggle in Models). The answer notes which provider replied.
 - **Private by default.** Keys and skills live in `chrome.storage.local`. Page content goes only to the provider you configured, and only when you send.
 
 ## Install

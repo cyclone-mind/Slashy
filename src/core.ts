@@ -78,3 +78,38 @@ export function endpoint(p: Pick<Provider, 'protocol' | 'baseUrl'>): string {
   const base = p.baseUrl.replace(/\/+$/, '');
   return p.protocol === 'anthropic' ? `${base}/v1/messages` : `${base}/chat/completions`;
 }
+
+/** Models often wrap the whole answer in a ```markdown fence when a prompt shows one as the output format. Unwrap it so it renders. */
+export function unwrapFence(text: string): string {
+  const m = /^\s*```(?:markdown|md)[ \t]*\r?\n([\s\S]*?)(?:\r?\n```[ \t]*\s*)?$/.exec(text);
+  return m ? m[1] : text;
+}
+
+/** Fill {selection} / {url} / {title} placeholders (also {{...}}) in a skill prompt. */
+export function fillPrompt(prompt: string, ctx: PageContext | null): string {
+  const vals: Record<string, string> = {
+    selection: ctx?.selection || 'the page content',
+    url: ctx?.url ?? '',
+    title: ctx?.title ?? '',
+  };
+  return prompt.replace(/\{\{?\s*(selection|url|title)\s*\}?\}/g, (_, k: string) => vals[k]);
+}
+
+export interface Attempt {
+  provider: Provider;
+  model: string;
+}
+
+/** Order to try: the active provider/model first, then the other providers in list order (their first model).
+ *  Providers without a key are skipped unless they are local (e.g. Ollama). */
+export function providerChain(
+  s: { providers: Provider[]; activeProviderId: string | null; activeModel: string | null },
+  chain = true,
+): Attempt[] {
+  const usable = (p: Provider) => !!p.models[0] && (!!p.apiKey || /\/\/(localhost|127\.0\.0\.1)/.test(p.baseUrl));
+  const active = s.providers.find(p => p.id === s.activeProviderId);
+  const out: Attempt[] = [];
+  if (active) out.push({ provider: active, model: s.activeModel ?? active.models[0] });
+  if (chain) for (const p of s.providers) if (p !== active && usable(p)) out.push({ provider: p, model: p.models[0] });
+  return out.filter(a => a.model);
+}

@@ -47,3 +47,25 @@ test('endpoint', () => {
   assert.equal(endpoint({ protocol: 'openai', baseUrl: 'https://x/v1/' }), 'https://x/v1/chat/completions');
   assert.equal(endpoint({ protocol: 'anthropic', baseUrl: 'https://a' }), 'https://a/v1/messages');
 });
+
+import { fillPrompt, providerChain, unwrapFence } from './core.ts';
+
+test('unwrapFence strips an outer markdown fence, closed or still streaming', () => {
+  assert.equal(unwrapFence('```markdown\n## A\n\ntext\n```'), '## A\n\ntext');
+  assert.equal(unwrapFence('```markdown\n## A\ntex'), '## A\ntex');
+  assert.equal(unwrapFence('```ts\ncode\n```'), '```ts\ncode\n```');
+  assert.equal(unwrapFence('plain **md**'), 'plain **md**');
+});
+
+test('fillPrompt replaces placeholders', () => {
+  const ctx = { title: 'T', url: 'U', selection: 'S', text: '' };
+  assert.equal(fillPrompt('translate {selection} from {{url}}', ctx), 'translate S from U');
+  assert.equal(fillPrompt('x {selection}', null), 'x the page content');
+});
+
+test('providerChain: active first, then list order, skipping keyless remote providers', () => {
+  const p = (id: string, apiKey: string, baseUrl = 'https://x') => ({ id, name: id, protocol: 'openai' as const, baseUrl, apiKey, models: [id + '-m'] });
+  const s = { providers: [p('a', 'k'), p('b', ''), p('c', 'k'), p('d', '', 'http://localhost:11434/v1')], activeProviderId: 'c', activeModel: 'c-m' };
+  assert.deepEqual(providerChain(s).map(x => x.provider.id), ['c', 'a', 'd']);
+  assert.deepEqual(providerChain(s, false).map(x => x.provider.id), ['c']);
+});

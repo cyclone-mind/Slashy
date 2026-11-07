@@ -152,3 +152,11 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 0.85; 
 
 .saved { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; font-size: 12px; font-weight: 600; color: var(--accent); opacity: 0; transform: translateY(2px); transition: opacity 0.25s var(--ease), transform 0.25s var(--ease); }
 .saved.on { opacity: 1; transform: none; }
+
+.via { margin-top: 8px; color: var(--muted); font-size: 12px; }
+.err { white-space: pre-wrap; }
+.order { display: flex; flex: none; }
+.order .icon { width: 26px; height: 26px; }
+.fallback { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; margin-bottom: 8px; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+.fallback input { accent-color: var(--accent); margin-top: 3px; }
+.fallback b { display: block; color: var(--fg); font-weight: 600; }

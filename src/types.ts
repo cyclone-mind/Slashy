@@ -23,6 +23,8 @@ export interface Settings {
   activeProviderId: string | null;
   activeModel: string | null;
   skills: Skill[];
+  /** Try the other providers (in list order) if the active one fails before streaming. Default on. */
+  fallback?: boolean;
 }
 
 export interface PageContext {
@@ -40,4 +42,5 @@ export interface ChatMessage {
   skill?: string; // skill name shown as a chip
   context?: { title: string; url: string; selection: string };
   error?: string;
+  via?: string; // set when a fallback provider answered
 }

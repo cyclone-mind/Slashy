@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from 'lucide-react';
 import { PRESETS } from '../presets';
 import { uid, type useSettings } from '../store';
 import type { Provider, Settings } from '../types';
@@ -22,6 +22,12 @@ export function ProvidersView({ settings, update, onBack }: Props) {
     flash();
   };
   const activate = (p: Provider) => update(s => ({ ...s, activeProviderId: p.id, activeModel: p.models[0] ?? null }));
+  const move = (i: number, d: -1 | 1) =>
+    update(s => {
+      const providers = [...s.providers];
+      [providers[i], providers[i + d]] = [providers[i + d], providers[i]];
+      return { ...s, providers };
+    });
   const addFrom = (i: number) => {
     const p: Provider = { ...PRESETS[i], id: uid(), apiKey: '' };
     update(s => ({
@@ -94,7 +100,7 @@ export function ProvidersView({ settings, update, onBack }: Props) {
       <main className="scroll">
         {settings.providers.length > 0 && (
           <ul className="list">
-            {settings.providers.map(p => (
+            {settings.providers.map((p, i) => (
               <li key={p.id}>
                 <button className="row-main" onClick={() => setEditId(p.id)}>
                   <b>
@@ -102,9 +108,26 @@ export function ProvidersView({ settings, update, onBack }: Props) {
                   </b>
                   <span>{p.apiKey ? p.models.join(', ') || 'No models' : 'API key missing'}</span>
                 </button>
+                <span className="order">
+                  <button className="icon" aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                    <ArrowUp size={14} />
+                  </button>
+                  <button className="icon" aria-label={`Move ${p.name} down`} disabled={i === settings.providers.length - 1} onClick={() => move(i, 1)}>
+                    <ArrowDown size={14} />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
+        )}
+        {settings.providers.length > 1 && (
+          <label className="fallback">
+            <input type="checkbox" checked={settings.fallback !== false} onChange={e => update(s => ({ ...s, fallback: e.target.checked }))} />
+            <span>
+              <b>Fall back automatically</b>
+              If the Active provider fails before answering, try the others top to bottom, using each one's first model.
+            </span>
+          </label>
         )}
         {picking ? (
           <ul className="list presets" aria-label="Choose a provider">

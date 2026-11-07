@@ -11,6 +11,7 @@ createServer((req, res) => {
   res.setHeader('access-control-allow-origin', '*');
   res.setHeader('access-control-allow-headers', '*');
   if (req.url === '/page') return res.writeHead(200, { 'content-type': 'text/html' }).end(PAGE);
+  if (req.url.startsWith('/fail/')) return res.writeHead(500, { 'content-type': 'application/json' }).end('{"error":{"message":"simulated outage"}}');
   if (req.method === 'OPTIONS') return res.writeHead(204).end();
   let body = '';
   req.on('data', c => (body += c));
@@ -18,7 +19,8 @@ createServer((req, res) => {
     const { messages = [] } = JSON.parse(body || '{}');
     const sys = messages[0]?.content ?? '';
     const user = messages.at(-1)?.content ?? '';
-    const reply = `**Mock reply**\n\n- system: ${sys.slice(0, 60)}\n- user chars: ${user.length}\n\n> ${user.slice(0, 160).replace(/\n/g, ' ')}`;
+    let reply = `**Mock reply**\n\n- system: ${sys.slice(0, 60)}\n- user chars: ${user.length}\n\n> ${user.slice(0, 160).replace(/\n/g, ' ')}`;
+    if (sys.includes('FENCE')) reply = ['```markdown', '## 来源', '', '---', '', '**bold** text', '```'].join('\n');
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     const send = d => res.write(`data: ${JSON.stringify({ choices: [{ delta: d }] })}\n\n`);
     send({ reasoning_content: 'Reading the selection, then answering briefly. ' });
