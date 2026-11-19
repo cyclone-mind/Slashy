@@ -119,6 +119,35 @@ test('buildRequest: thinking per vendor', () => {
   assert.deepEqual(buildRequest(prov('https://api.openai.com/v1'), 'gpt-5-mini', 's', msgs, on).body.reasoning, { summary: 'auto' });
 });
 
+test('explicit reasoning effort uses the endpoint format without changing the skill or enabling search', () => {
+  const prompt = 'Keep this skill unchanged.';
+  for (const effort of ['low', 'medium', 'high'] as const) {
+    const opts = { search: false, think: true, effort };
+    const custom = buildRequest(prov('https://gateway.test/v1'), 'model-alias', prompt, msgs, opts);
+    assert.equal(custom.style, 'chat');
+    assert.equal(custom.body.reasoning_effort, effort);
+    assert.deepEqual(custom.body.messages, [{ role: 'system', content: prompt }, ...msgs]);
+    const openai = buildRequest(prov('https://api.openai.com/v1'), 'gpt-6.1-sol', prompt, msgs, opts);
+    assert.equal(openai.style, 'responses');
+    assert.deepEqual(openai.body.reasoning, { summary: 'auto', effort });
+    assert.equal(openai.body.instructions, prompt);
+    assert.equal(openai.body.tools, undefined);
+  }
+});
+
+test('default, disabled and unsupported routes do not receive the saved effort', () => {
+  const custom = prov('https://gateway.test/v1');
+  const openai = prov('https://api.openai.com/v1');
+  const on = { search: true, think: true, effort: 'high' as const };
+  assert.equal(buildRequest(custom, 'alias', 's', msgs, { ...on, effort: undefined }).body.reasoning_effort, undefined);
+  assert.equal(buildRequest(custom, 'alias', 's', msgs, { ...on, think: false }).body.reasoning_effort, undefined);
+  assert.equal(buildRequest(openai, 'gpt-5-mini', 's', msgs, { ...on, think: false }).body.reasoning, undefined);
+  assert.equal(buildRequest(openai, 'gpt-4o', 's', msgs, on).body.reasoning, undefined);
+  const vendor = buildRequest(prov('https://api.deepseek.com/v1'), 'deepseek-chat', 's', msgs, on);
+  assert.equal(vendor.body.reasoning_effort, undefined);
+  assert.deepEqual(vendor.body.thinking, { type: 'enabled' });
+});
+
 test('responses stream parsing + search helpers', () => {
   assert.deepEqual(parseDelta('responses', '{"type":"response.output_text.delta","delta":"a"}'), { text: 'a' });
   assert.deepEqual(parseDelta('responses', '{"type":"response.reasoning_summary_text.delta","delta":"r"}'), { reasoning: 'r' });

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ArrowUp, Brain, ChevronRight, Eraser, FileText, Globe, Settings2, Slash, Square, TextSelect, X, Zap } from 'lucide-react';
 import { buildUserContent, fillPrompt, filterSkills, providerChain, slashQuery, toWire, unwrapFence } from '../core';
-import { clientSearch, formatHits, kindOf, searchMode, searchQuery } from '../features';
+import { clientSearch, formatHits, kindOf, searchMode, searchQuery, supportsReasoningEffort } from '../features';
 import { streamChat } from '../llm';
 import { readActivePage } from '../page';
 import { uid, useSettings } from '../store';
-import type { ChatMessage, PageContext, Skill } from '../types';
+import { REASONING_EFFORTS, type ChatMessage, type PageContext, type Skill } from '../types';
 import { ProvidersView } from './ProvidersView';
 import { SkillsView } from './SkillsView';
 
@@ -115,7 +115,7 @@ export function App() {
             m,
             sk ? fillPrompt(sk.prompt, fresh) : GENERIC,
             wire,
-            { search, think },
+            { search, think, effort: settings.reasoningEffort },
             d => {
               got = true;
               patch(r => ({ ...r, content: r.content + (d.text ?? ''), reasoning: (r.reasoning ?? '') + (d.reasoning ?? '') || undefined }));
@@ -286,6 +286,20 @@ export function App() {
               onClick={() => update(s => ({ ...s, thinking: !s.thinking }))}>
               <Brain size={14} /> Think
             </button>
+            {settings.thinking && provider && supportsReasoningEffort(kindOf(provider), settings.activeModel ?? provider.models[0] ?? '') && (
+              <select
+                className="model effort"
+                aria-label="Reasoning effort"
+                title="Reasoning effort (model support varies)"
+                value={settings.reasoningEffort ?? ''}
+                onChange={event => {
+                  const effort = REASONING_EFFORTS.find(level => level === event.target.value);
+                  update(s => ({ ...s, reasoningEffort: effort }));
+                }}>
+                <option value="">Default</option>
+                {REASONING_EFFORTS.map(level => <option key={level} value={level}>{level}</option>)}
+              </select>
+            )}
             {busy ? (
               <button className="send stop" aria-label="Stop" onClick={() => abort.current?.abort()}>
                 <Square size={13} fill="currentColor" />

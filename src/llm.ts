@@ -1,5 +1,5 @@
 import { parseDelta, sseParser, type Delta } from './core';
-import { buildRequest, type Wire } from './features';
+import { buildRequest, type RequestOptions, type Wire } from './features';
 import type { Provider } from './types';
 
 export type { Wire as WireMessage };
@@ -10,7 +10,7 @@ export async function streamChat(
   model: string,
   system: string,
   messages: Wire[],
-  opts: { search: boolean; think: boolean },
+  opts: RequestOptions,
   onDelta: (d: Delta) => void,
   signal: AbortSignal,
 ): Promise<void> {

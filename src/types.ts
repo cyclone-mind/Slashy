@@ -1,4 +1,6 @@
 export type Protocol = 'openai' | 'anthropic';
+export const REASONING_EFFORTS = ['low', 'medium', 'high'] as const;
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
 
 export interface Provider {
   id: string;
@@ -28,6 +30,7 @@ export interface Settings {
   /** Composer toggles; both default off. */
   webSearch?: boolean;
   thinking?: boolean;
+  reasoningEffort?: ReasoningEffort;
   /** Optional. Used for web search on providers without a native one (works without a key at a low rate limit). */
   firecrawlKey?: string;
 }
