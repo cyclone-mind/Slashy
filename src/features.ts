@@ -1,5 +1,5 @@
 import { endpoint } from './core.ts';
-import type { Provider } from './types';
+import { REASONING_EFFORTS, type Provider, type ReasoningEffort } from './types.ts';
 
 export type Kind = 'anthropic' | 'openai' | 'openrouter' | 'deepseek' | 'qwen' | 'zhipu' | 'gemini' | 'other';
 export type ApiStyle = 'chat' | 'responses' | 'messages';
@@ -28,7 +28,9 @@ export function searchMode(k: Kind): SearchMode {
   return k === 'deepseek' ? 'deepseek' : 'firecrawl';
 }
 
-const OPENAI_REASONING = /^(o\d|gpt-5)/;
+export function supportsReasoningEffort(kind: Kind, model: string): boolean {
+  return kind === 'other' || (kind === 'openai' && /^(o\d|gpt-[56]\b)/.test(model));
+}
 /** Newer Claude models use adaptive thinking; older ones take a token budget. */
 const claudeAdaptive = (m: string) => /claude-(?:fable|opus|sonnet|haiku)-([5-9]|\d{2})/.test(m) || /4-6/.test(m);
 
@@ -39,13 +41,19 @@ export interface Req {
   style: ApiStyle;
 }
 
+export interface RequestOptions {
+  search: boolean;
+  think: boolean;
+  effort?: ReasoningEffort;
+}
+
 /** Build the streaming request for a provider, adding native web-search / thinking switches when asked for. */
 export function buildRequest(
   p: Provider,
   model: string,
   system: string,
   messages: Wire[],
-  opts: { search: boolean; think: boolean },
+  opts: RequestOptions,
 ): Req {
   const k = kindOf(p);
   const native = opts.search && searchMode(k) === 'native';
@@ -67,11 +75,12 @@ export function buildRequest(
   if (p.apiKey) headers.authorization = `Bearer ${p.apiKey}`;
   const base = p.baseUrl.replace(/\/+$/, '');
 
-  const reasoningModel = OPENAI_REASONING.test(model);
-  if (k === 'openai' && (native || (opts.think && reasoningModel))) {
+  const adjustable = opts.think && supportsReasoningEffort(k, model);
+  const effort = adjustable ? REASONING_EFFORTS.find(level => level === opts.effort) : undefined;
+  if (k === 'openai' && (native || adjustable)) {
     const body: Record<string, unknown> = { model, instructions: system, input: messages, stream: true };
     if (native) body.tools = [{ type: 'web_search' }];
-    if (opts.think && reasoningModel) body.reasoning = { summary: 'auto' }; // effort: vendor default
+    if (adjustable) body.reasoning = effort ? { summary: 'auto', effort } : { summary: 'auto' };
     return { url: `${base}/responses`, headers, body, style: 'responses' };
   }
 
@@ -89,8 +98,8 @@ export function buildRequest(
     if (opts.think) body.thinking = { type: 'enabled' };
   } else if (k === 'gemini') {
     if (opts.think) body.reasoning_effort = 'medium';
-  } else if (k === 'openai' && opts.think && reasoningModel) {
-    body.reasoning_effort = 'medium';
+  } else if (effort) {
+    body.reasoning_effort = effort;
   }
   return { url: endpoint(p), headers, body, style: 'chat' };
 }

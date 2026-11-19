@@ -10,6 +10,7 @@
 - **自动带入网页上下文**：优先发送当前选中的文字；没有选中时发送整页文本（可关闭「Use page」）。
 - **自定义技能**：技能 = 名称 + 提示词，可新建、编辑、停用、恢复默认。内置：Summarize、Explain、Translate、Polish、Sentence study。
 - **多模型厂商**：预设 DeepSeek / OpenAI / Anthropic / Gemini / OpenRouter / Kimi / 智谱 / 通义 / SiliconFlow / Ollama，也可自定义地址；输入框下方一键切换模型。支持流式输出和思考过程展示。
+- **思考强度**：使用 OpenAI 推理模型或自定义 OpenAI 兼容接口时，打开输入框下方的 `Think`，可选默认、低、中、高。默认不指定强度，由服务端决定；关闭 `Think` 后会记住档位，但不再发送强度参数。部分网关或模型可能拒绝或忽略指定的档位。
 - **默认私密**：密钥与技能保存在本机 `chrome.storage.local`，页面内容只会在你发送时发往你配置的厂商。
 
 ## 安装

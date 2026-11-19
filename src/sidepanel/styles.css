@@ -91,7 +91,7 @@ kbd { font: 12px var(--mono); background: var(--raised); border: 1px solid var(-
 .ctx.sel svg { color: var(--accent); }
 .toggle { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; cursor: pointer; flex: none; }
 .toggle input { accent-color: var(--accent); margin: 0; }
-.box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 6px 10px; display: grid; gap: 4px; transition: border-color 0.15s; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 6px 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; transition: border-color 0.15s; }
 .box:focus-within { border-color: color-mix(in oklch, var(--accent) 70%, var(--line)); }
 .box .chip { justify-self: start; }
 .box textarea { width: 100%; resize: none; border: 0; outline: 0; background: none; color: inherit; font: inherit; max-height: 30vh; field-sizing: content; min-height: 2.9em; }
@@ -165,4 +165,11 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 0.85; 
 .tog[aria-pressed='true'] { background: var(--accent-soft); color: var(--fg); }
 .tog[aria-pressed='true'] svg { color: var(--accent); }
 .model { max-width: 40%; }
+.box .model:first-child { min-width: 0; }
+.effort { flex: none; text-transform: capitalize; }
+.send { flex: none; }
+@media (max-width: 400px) {
+  .row:has(.effort) { flex-wrap: wrap; }
+  .row:has(.effort) > .model:first-child { flex-basis: 100%; max-width: 100%; }
+}
 .websearch { margin: 8px 0 12px; padding: 0 10px; }
